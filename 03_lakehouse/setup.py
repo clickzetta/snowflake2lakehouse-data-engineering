@@ -34,7 +34,7 @@ from clickzetta.zettapark.session import Session
 load_dotenv()
 
 SCHEMAS = ["frostbyte_raw_pos", "frostbyte_raw_customer", "frostbyte_harmonized", "frostbyte_analytics"]
-VOL_SCHEMA = "public"   # Volume lives in public schema (always exists)
+VOL_SCHEMA = "frostbyte_raw_pos"   # Volume lives in frostbyte_raw_pos (created by cz-cli before session)
 VOL_NAME   = os.environ.get("CLICKZETTA_VOLUME", "frostbyte_vol")
 PROFILE    = os.environ.get("CZ_PROFILE", "frostbyte")
 DATASETS   = pathlib.Path(__file__).parent / "datasets"

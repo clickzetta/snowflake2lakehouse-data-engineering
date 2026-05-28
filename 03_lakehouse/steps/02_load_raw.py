@@ -29,7 +29,7 @@ from clickzetta.zettapark.session import Session
 
 load_dotenv(pathlib.Path(__file__).parent.parent / ".env")
 
-VOL_SCHEMA = "public"   # Volume lives in public schema
+VOL_SCHEMA = "frostbyte_raw_pos"   # Volume lives in frostbyte_raw_pos
 VOL_NAME   = os.environ.get("CLICKZETTA_VOLUME", "frostbyte_vol")
 VOL_BASE   = f"vol://{VOL_SCHEMA}.{VOL_NAME}"
 

@@ -43,7 +43,7 @@ DROP TABLE IF EXISTS frostbyte_raw_pos.country;
 DROP TABLE IF EXISTS frostbyte_raw_customer.customer_loyalty;
 
 -- Drop volume (removes all uploaded data files)
-DROP VOLUME IF EXISTS public.frostbyte_vol;
+DROP VOLUME IF EXISTS frostbyte_raw_pos.frostbyte_vol;
 
 -- Drop schemas
 DROP SCHEMA IF EXISTS frostbyte_analytics;
