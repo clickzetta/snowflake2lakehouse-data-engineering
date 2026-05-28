@@ -80,31 +80,44 @@ def merge_order_updates(session):
 
     if stream_count == 0 and orders_count == 0:
         # Initial load: stream is empty because pos_flattened_v_table was just created.
-        # Load directly from the view for the first run.
+        # Load directly from the view — view has clean column names (no rsuffix).
         print("  Initial load: reading from pos_flattened_v directly...")
-        source = session.table("frostbyte_harmonized.pos_flattened_v")
+        session.sql("""
+            INSERT INTO frostbyte_harmonized.orders
+            SELECT
+                order_detail_id, order_id, truck_id, menu_item_id, line_number,
+                order_ts, quantity, unit_price, price,
+                order_amount, order_tax_amount, order_discount_amount, order_total,
+                location_id, primary_city, region, iso_country_code,
+                country, truck_id_t, menu_type_id, truck_city,
+                truck_brand_name, menu_type, menu_item_name, item_category, item_subcategory,
+                cost_of_goods_usd, sale_price_usd, franchise_id,
+                franchise_flag, franchisee_first_name, franchisee_last_name, order_ts_date,
+                CURRENT_TIMESTAMP() AS meta_updated_at
+            FROM frostbyte_harmonized.pos_flattened_v
+        """).collect()
     elif stream_count == 0:
         print("  No new data in stream, skipping merge.")
         return
     else:
-        source = session.table("frostbyte_harmonized.pos_flattened_v_stream")
+        # Incremental load from stream.
+        # Stream is built on pos_flattened_v_table (ZettaPark DataFrame join),
+        # so column names have rsuffix suffixes (order_ts_oh, region_l, etc.)
+        session.sql("""
+            INSERT INTO frostbyte_harmonized.orders
+            SELECT
+                order_detail_id, order_id, truck_id, menu_item_id, line_number,
+                order_ts_oh AS order_ts, quantity, unit_price, price,
+                order_amount, order_tax_amount, order_discount_amount, order_total,
+                location_id, primary_city, region_l AS region, iso_country_code_l AS iso_country_code,
+                country_l AS country, truck_id_t, menu_type_id, truck_city,
+                truck_brand_name, menu_type, menu_item_name, item_category, item_subcategory,
+                cost_of_goods_usd, sale_price_usd, franchise_id_f AS franchise_id,
+                franchise_flag, franchisee_first_name, franchisee_last_name, order_ts_date,
+                CURRENT_TIMESTAMP() AS meta_updated_at
+            FROM frostbyte_harmonized.pos_flattened_v_stream
+        """).collect()
 
-    # Use SQL INSERT to avoid ZettaPark column name resolution issues with streams
-    # Stream metadata columns (__change_type etc.) are excluded via explicit SELECT
-    session.sql("""
-        INSERT INTO frostbyte_harmonized.orders
-        SELECT
-            order_detail_id, order_id, truck_id, menu_item_id, line_number,
-            order_ts_oh AS order_ts, quantity, unit_price, price,
-            order_amount, order_tax_amount, order_discount_amount, order_total,
-            location_id, primary_city, region_l AS region, iso_country_code_l AS iso_country_code,
-            country_l AS country, truck_id_t, menu_type_id, truck_city,
-            truck_brand_name, menu_type, menu_item_name, item_category, item_subcategory,
-            cost_of_goods_usd, sale_price_usd, franchise_id_f AS franchise_id,
-            franchise_flag, franchisee_first_name, franchisee_last_name, order_ts_date,
-            CURRENT_TIMESTAMP() AS meta_updated_at
-        FROM frostbyte_harmonized.pos_flattened_v_stream
-    """).collect()
     count = session.table("frostbyte_harmonized.orders").count()
     print(f"  Append complete. orders table now has {count:,} rows.")
 
