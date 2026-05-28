@@ -126,9 +126,15 @@ def register_cz_profile():
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"  WARNING: cz-cli profile create failed: {result.stderr.strip()}")
-        print("  You can register the profile manually:")
-        print(f"    cz-cli profile create {PROFILE} --service ... --instance ... --workspace ... --username ... --password ...")
+        # Profile may already exist — check if it works
+        check = subprocess.run(["cz-cli", "profile", "detail", PROFILE],
+                               capture_output=True, text=True)
+        if check.returncode == 0:
+            print(f"  Profile '{PROFILE}' already exists, skipping.")
+        else:
+            print(f"  WARNING: cz-cli profile create failed: {result.stderr.strip()}")
+            print("  Register manually before running other steps:")
+            print(f"    cz-cli profile create {PROFILE} --service <service> --instance <instance> --workspace <workspace> --username <user> --password <pass>")
     else:
         print(f"  Profile '{PROFILE}' registered.")
 
