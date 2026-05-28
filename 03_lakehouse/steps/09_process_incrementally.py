@@ -73,16 +73,27 @@ def upload_incremental_files(session):
 
 
 def load_incremental_tables(session):
-    """Append year=2022 data into raw tables."""
+    """Append year=2022 data into raw tables, then refresh pos_flattened_v_table."""
     for tname, vol_path in INCREMENTAL_TABLES.items():
         print(f"  Loading {tname} from {vol_path}")
         try:
             df = session.read.option("compression", "snappy").parquet(vol_path)
-            df.copy_into_table(f"frostbyte_raw_pos.{tname}", force=False)
+            # append mode: add new rows without overwriting existing year=2021 data
+            df.write.save_as_table(f"frostbyte_raw_pos.{tname}", mode="append")
             count = session.table(f"frostbyte_raw_pos.{tname}").count()
             print(f"    → {count:,} total rows")
         except Exception as e:
             print(f"    SKIP: {e}")
+
+    # Refresh pos_flattened_v_table so the stream picks up new rows
+    print("  Refreshing pos_flattened_v_table...")
+    session.sql("""
+        INSERT INTO frostbyte_harmonized.pos_flattened_v_table
+        SELECT * FROM frostbyte_harmonized.pos_flattened_v
+        WHERE order_ts >= '2022-01-01'
+    """).collect()
+    new_count = session.table("frostbyte_harmonized.pos_flattened_v_table").count()
+    print(f"    → pos_flattened_v_table: {new_count:,} total rows")
 
 
 def run_pipeline(session):

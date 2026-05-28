@@ -89,17 +89,24 @@ def merge_order_updates(session):
     else:
         source = session.table("frostbyte_harmonized.pos_flattened_v_stream")
 
-    target = session.table("frostbyte_harmonized.orders")
-    cols_to_update = {c: source[c] for c in source.schema.names if "METADATA" not in c}
-    updates = {**cols_to_update, "meta_updated_at": F.current_timestamp()}
-
-    target.merge(
-        source,
-        target["order_detail_id"] == source["order_detail_id"],
-        [F.when_matched().update(updates),
-         F.when_not_matched().insert(updates)]
-    )
-    print(f"  Merge complete. orders table now has {target.count():,} rows.")
+    # Use SQL INSERT to avoid ZettaPark column name resolution issues with streams
+    # Stream metadata columns (__change_type etc.) are excluded via explicit SELECT
+    session.sql("""
+        INSERT INTO frostbyte_harmonized.orders
+        SELECT
+            order_detail_id, order_id, truck_id, menu_item_id, line_number,
+            order_ts_oh AS order_ts, quantity, unit_price, price,
+            order_amount, order_tax_amount, order_discount_amount, order_total,
+            location_id, primary_city, region_l AS region, iso_country_code_l AS iso_country_code,
+            country_l AS country, truck_id_t, menu_type_id, truck_city,
+            truck_brand_name, menu_type, menu_item_name, item_category, item_subcategory,
+            cost_of_goods_usd, sale_price_usd, franchise_id_f AS franchise_id,
+            franchise_flag, franchisee_first_name, franchisee_last_name, order_ts_date,
+            CURRENT_TIMESTAMP() AS meta_updated_at
+        FROM frostbyte_harmonized.pos_flattened_v_stream
+    """).collect()
+    count = session.table("frostbyte_harmonized.orders").count()
+    print(f"  Append complete. orders table now has {count:,} rows.")
 
 
 if __name__ == "__main__":
