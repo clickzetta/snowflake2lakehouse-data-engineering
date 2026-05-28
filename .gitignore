@@ -1,6 +1,9 @@
 # Mac files
 .DS_Store
 
+# Local data files (large — download separately via aws s3 cp)
+03_lakehouse/datasets/
+
 # Snowpark specific files
 creds.json
 
