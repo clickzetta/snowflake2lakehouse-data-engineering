@@ -23,8 +23,8 @@ DROP TABLE STREAM IF EXISTS frostbyte_harmonized.orders_stream;
 DROP TABLE STREAM IF EXISTS frostbyte_harmonized.pos_flattened_v_stream;
 
 -- Drop analytics objects
-DROP FUNCTION IF EXISTS frostbyte_analytics.fahrenheit_to_celsius_udf(DECIMAL(35,4));
-DROP FUNCTION IF EXISTS frostbyte_analytics.inch_to_millimeter_udf(DECIMAL(35,4));
+DROP FUNCTION IF EXISTS frostbyte_analytics.fahrenheit_to_celsius_udf;
+DROP FUNCTION IF EXISTS frostbyte_analytics.inch_to_millimeter_udf;
 DROP TABLE IF EXISTS frostbyte_analytics.daily_city_metrics;
 
 -- Drop harmonized objects

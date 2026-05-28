@@ -37,7 +37,6 @@ echo "Using cz-cli profile: $PROFILE"
 ORDERS_SCRIPT=$(cat <<PYEOF
 import os
 from clickzetta.zettapark.session import Session
-from clickzetta.zettapark import functions as F
 
 session = Session.builder.configs({
     "username":  "${CLICKZETTA_USERNAME}",
@@ -54,19 +53,34 @@ orders_count = session.table("frostbyte_harmonized.orders").count()
 print(f"{stream_count} records in stream, {orders_count} in orders")
 
 if stream_count == 0 and orders_count == 0:
-    source = session.table("frostbyte_harmonized.pos_flattened_v")
+    # Initial load from view
+    session.sql("""
+        INSERT INTO frostbyte_harmonized.orders
+        SELECT *, CURRENT_TIMESTAMP() AS meta_updated_at
+        FROM frostbyte_harmonized.pos_flattened_v
+    """).collect()
 elif stream_count == 0:
     print("No new data, skipping.")
     exit(0)
 else:
-    source = session.table("frostbyte_harmonized.pos_flattened_v_stream")
+    # Incremental load from stream (stream has rsuffix column names from pos_flattened_v_table)
+    session.sql("""
+        INSERT INTO frostbyte_harmonized.orders
+        SELECT
+            order_detail_id, order_id, truck_id, menu_item_id, line_number,
+            order_ts_oh AS order_ts, quantity, unit_price, price,
+            order_amount, order_tax_amount, order_discount_amount, order_total,
+            location_id, primary_city, region_l AS region, iso_country_code_l AS iso_country_code,
+            country_l AS country, truck_id_t, menu_type_id, truck_city,
+            truck_brand_name, menu_type, menu_item_name, item_category, item_subcategory,
+            cost_of_goods_usd, sale_price_usd, franchise_id_f AS franchise_id,
+            franchise_flag, franchisee_first_name, franchisee_last_name, order_ts_date,
+            CURRENT_TIMESTAMP() AS meta_updated_at
+        FROM frostbyte_harmonized.pos_flattened_v_stream
+    """).collect()
 
-target = session.table("frostbyte_harmonized.orders")
-cols = {c: source[c] for c in source.schema.names if "METADATA" not in c}
-cols["meta_updated_at"] = F.current_timestamp()
-target.merge(source, target["order_detail_id"] == source["order_detail_id"],
-    [F.when_matched().update(cols), F.when_not_matched().insert(cols)])
-print(f"Done. orders: {target.count()} rows")
+count = session.table("frostbyte_harmonized.orders").count()
+print(f"Done. orders: {count} rows")
 PYEOF
 )
 

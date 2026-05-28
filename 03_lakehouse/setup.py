@@ -69,8 +69,7 @@ def create_schemas_and_volume_via_cli():
 
 
 def create_session():
-    # Connect using 'public' schema — Volume lives in frostbyte_raw_pos
-    # but session schema must exist at connection time
+    # Connect using 'public' schema — Volume lives in public schema (always exists)
     return Session.builder.configs({
         "username":  os.environ["CLICKZETTA_USERNAME"],
         "password":  os.environ["CLICKZETTA_PASSWORD"],
@@ -127,9 +126,9 @@ def register_cz_profile():
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"  WARNING: cz-cli profile add failed: {result.stderr.strip()}")
+        print(f"  WARNING: cz-cli profile create failed: {result.stderr.strip()}")
         print("  You can register the profile manually:")
-        print(f"    cz-cli profile add --name {PROFILE} ...")
+        print(f"    cz-cli profile create {PROFILE} --service ... --instance ... --workspace ... --username ... --password ...")
     else:
         print(f"  Profile '{PROFILE}' registered.")
 

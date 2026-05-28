@@ -45,22 +45,17 @@ CREATE VOLUME IF NOT EXISTS frostbyte_raw_pos.frostbyte_vol;
 
 -- ----------------------------------------------------------------------------
 -- Step 4: Create SQL UDF
--- Snowflake: CREATE FUNCTION ... AS $$ ... $$ — identical syntax in Lakehouse
--- Note: FAHRENHEIT_TO_CELSIUS was a Python UDF in the original project.
---   Python UDFs require external function service setup in Lakehouse.
---   We replace it with a SQL UDF here (same logic, simpler deployment).
+-- Snowflake: CREATE FUNCTION ... AS $$ ... $$
+-- Lakehouse: use RETURN expr syntax (no $$ delimiter); use DOUBLE to avoid
+--   DECIMAL precision overflow in multiplication. See 05_udf.sql for details.
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION frostbyte_analytics.fahrenheit_to_celsius_udf(temp_f DECIMAL(35,4))
-RETURNS DECIMAL(35,4)
-AS $$
-    (temp_f - 32) * (5.0 / 9)
-$$;
+CREATE OR REPLACE FUNCTION frostbyte_analytics.fahrenheit_to_celsius_udf(temp_f DOUBLE)
+RETURNS DOUBLE
+RETURN (temp_f - 32.0) * 5.0 / 9.0;
 
-CREATE OR REPLACE FUNCTION frostbyte_analytics.inch_to_millimeter_udf(inch DECIMAL(35,4))
-RETURNS DECIMAL(35,4)
-AS $$
-    inch * 25.4
-$$;
+CREATE OR REPLACE FUNCTION frostbyte_analytics.inch_to_millimeter_udf(inch DOUBLE)
+RETURNS DOUBLE
+RETURN inch * 25.4;
 
 -- ----------------------------------------------------------------------------
 -- Step 5: Grant usage to current user (optional, for multi-user setups)
